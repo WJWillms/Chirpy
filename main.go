@@ -20,6 +20,11 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 func readinessHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	// Set the content type header
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
@@ -30,6 +35,11 @@ func readinessHandler(w http.ResponseWriter, r *http.Request) {
 
 // Handler to write the number of hits
 func (cfg *apiConfig) hitsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	// Write the hits count to the response
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	fmt.Fprintf(w, "Hits: %d", cfg.fileserverHits)
@@ -37,6 +47,10 @@ func (cfg *apiConfig) hitsHandler(w http.ResponseWriter, r *http.Request) {
 
 // Handler to reset the hits counter
 func (cfg *apiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	// Reset the hits counter
 	cfg.fileserverHits = 0
 
