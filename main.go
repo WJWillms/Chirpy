@@ -68,7 +68,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Register the readiness handler for the /healthz path
-	mux.HandleFunc("/healthz", readinessHandler)
+	mux.HandleFunc("/api/healthz", readinessHandler)
 
 	// Define the directory to serve files from
 	staticDir := "." // Adjust this path to the directory containing your static files
@@ -83,10 +83,10 @@ func main() {
 	mux.Handle("/app/", appHandler)
 
 	// Register the hits handler for the /metrics path
-	mux.HandleFunc("/metrics", cfg.hitsHandler)
+	mux.HandleFunc("/api/metrics", cfg.hitsHandler)
 
 	// Register the reset handler for the /reset path
-	mux.HandleFunc("/reset", cfg.resetHandler)
+	mux.HandleFunc("/api/reset", cfg.resetHandler)
 
 	httpServer := &http.Server{
 		Addr:    ":8080",
