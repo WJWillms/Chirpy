@@ -33,18 +33,6 @@ func readinessHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-// Handler to write the number of hits
-func (cfg *apiConfig) hitsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Write the hits count to the response
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprintf(w, "Hits: %d", cfg.fileserverHits)
-}
-
 // Handler to reset the hits counter
 func (cfg *apiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -58,6 +46,27 @@ func (cfg *apiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK) // 200 OK
 	w.Write([]byte("Hits counter reset"))
+}
+
+// Handler for viewing Metrics as Admin
+func (cfg *apiConfig) adminMetricsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Generate HTML response
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	html := fmt.Sprintf(`
+        <html>
+        <body>
+            <h1>Welcome, Chirpy Admin</h1>
+            <p>Chirpy has been visited %d times!</p>
+        </body>
+        </html>`, cfg.fileserverHits)
+
+	w.WriteHeader(http.StatusOK) // 200 OK
+	w.Write([]byte(html))
 }
 
 func main() {
@@ -83,7 +92,7 @@ func main() {
 	mux.Handle("/app/", appHandler)
 
 	// Register the hits handler for the /metrics path
-	mux.HandleFunc("/api/metrics", cfg.hitsHandler)
+	mux.HandleFunc("/admin/metrics", cfg.adminMetricsHandler)
 
 	// Register the reset handler for the /reset path
 	mux.HandleFunc("/api/reset", cfg.resetHandler)
