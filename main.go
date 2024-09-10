@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -69,6 +70,36 @@ func (cfg *apiConfig) adminMetricsHandler(w http.ResponseWriter, r *http.Request
 	w.Write([]byte(html))
 }
 
+// Handler for validating Chirp length
+func (cfg *apiConfig) validateChirpHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error": "Method Not Allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse the JSON body
+	var requestBody struct {
+		Body string `json:"body"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		http.Error(w, `{"error": "Invalid JSON"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Validate the Chirp length
+	if len(requestBody.Body) > 140 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Chirp is too long"})
+		return
+	}
+
+	// Chirp is valid
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]bool{"valid": true})
+}
+
 func main() {
 	// Initialize apiConfig
 	cfg := &apiConfig{}
@@ -90,12 +121,12 @@ func main() {
 
 	// Register the file server handler for the /app/ path
 	mux.Handle("/app/", appHandler)
-
 	// Register the hits handler for the /metrics path
 	mux.HandleFunc("/admin/metrics", cfg.adminMetricsHandler)
-
 	// Register the reset handler for the /reset path
 	mux.HandleFunc("/api/reset", cfg.resetHandler)
+	// Register the validate chirp handler for the /api/validate_chirp path
+	mux.HandleFunc("/api/validate_chirp", cfg.validateChirpHandler)
 
 	httpServer := &http.Server{
 		Addr:    ":8080",
