@@ -1,42 +1,47 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
-	"github.com/WJWillms/chirpy/database"
+	"github.com/WJWillms/Chirpy/database"
 )
 
-var (
-	dbPath = "./database/database.json"
-	db     *database.DB
-)
+type apiConfig struct {
+	fileserverHits int
+	DB             *database.DB
+}
 
 func main() {
-	cfg := &apiConfig{}
+	const filepathRoot = "."
+	const port = "8080"
+
+	db, err := database.NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	apiCfg := apiConfig{
+		fileserverHits: 0,
+		DB:             db,
+	}
 
 	mux := http.NewServeMux()
+	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
+	mux.Handle("/app/", fsHandler)
 
-	// Register the chirp handler
-	mux.HandleFunc("/api/chirps", cfg.chirpHandler)
+	mux.HandleFunc("GET /api/healthz", readinessHandler)
+	mux.HandleFunc("GET /api/reset", apiCfg.resetHandler)
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreate)
+	mux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsRetrieve)
 
-	// Register other handlers
-	mux.HandleFunc("/api/healthz", readinessHandler)
-	mux.HandleFunc("/admin/metrics", cfg.adminMetricsHandler)
-	mux.HandleFunc("/api/reset", cfg.resetHandler)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.adminMetricsHandler)
 
-	staticDir := "." // Adjust this path as needed
-	fileServer := http.FileServer(http.Dir(staticDir))
-	appHandler := cfg.middlewareMetricsInc(http.StripPrefix("/app/", fileServer))
-	mux.Handle("/app/", appHandler)
-
-	httpServer := &http.Server{
-		Addr:    ":8080",
+	srv := &http.Server{
+		Addr:    ":" + port,
 		Handler: mux,
 	}
 
-	fmt.Println("Starting server on http://localhost:8080")
-	if err := httpServer.ListenAndServe(); err != nil {
-		fmt.Println("Server error:", err)
-	}
+	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
+	log.Fatal(srv.ListenAndServe())
 }
