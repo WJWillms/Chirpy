@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 )
 
 type apiConfig struct {
@@ -94,10 +95,20 @@ func (cfg *apiConfig) validateChirpHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Chirp is valid
+	// Replace profane words with "****"
+	profaneWords := []string{"kerfuffle", "sharbert", "fornax"}
+	cleanedBody := requestBody.Body
+
+	for _, word := range profaneWords {
+		pattern := "\\b" + word + "\\b"
+		re := regexp.MustCompile("(?i)" + pattern)
+		cleanedBody = re.ReplaceAllString(cleanedBody, "****")
+	}
+
+	// Respond with the cleaned Chirp
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]bool{"valid": true})
+	json.NewEncoder(w).Encode(map[string]string{"cleaned_body": cleanedBody})
 }
 
 func main() {
